@@ -1,0 +1,11 @@
+uv add fastapi
+uv add uvicorn
+create main.py file, import FastAPI, create instance and simple funtion which returns
+now in terminal start server (uvicorn main:app --reload), starts server but has an error (404), no path available
+so we need to decorate with @app.get('/), when you update this server reloads as we run using --reload
+now in localhost:8000 you see function returning hey, this is how we create an api. (but in real case, we return json from functions)
+so to create an api, just 4 things: import, instance, decorator, function. 
+---
+next we can create routes now (localhost:8000/about)
+if not created and trying to access this, you will get detail not found error
+so create a function that returns and add decorator (@app.get('/about)), now this works: localhost:8000/about
