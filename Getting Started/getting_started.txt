@@ -9,3 +9,177 @@ so to create an api, just 4 things: import, instance, decorator, function.
 next we can create routes now (localhost:8000/about)
 if not created and trying to access this, you will get detail not found error
 so create a function that returns and add decorator (@app.get('/about)), now this works: localhost:8000/about
+----
+now lets understand how fastapi is working under the hood, how it is able to do what we saw above
+it doesnt matter what names you give to functions inside file, when starting a server make sure you use correct name of the file and instance in (uvicorn main:app --reload)
+routes/endpoints/paths terminology are used interchangeably (preferred calling path in fastapi)
+get/post/delete/update are called operations in @app.get('/') and ('/') is called path in fastapi and the function on which this decorator is defined is called path operation function and @app is called path operation decorator
+fastapi runs from top to bottom, so if ambiguity is present in functions, we need to make sure we correct it, so when working with dynamix routing make sure you validate same kind of matching routes
+----
+swagger ui and ReDoc:
+creating api is done, how to validate as you have no frontend? its swagger ui
+to access use localhost:8000/docs (you can see all your apis here and test their funcionality)
+----
+query parameters:
+understand difference between usage of query and path parameters
+path parameters are also defined in path unlike query parameters
+-----
+Request Body:
+get - used to get something
+post - to create something
+need BaseModel and we extend it via class to create request Body
+and use that request body in function
+----
+how to debug?
+to debug, stop fastapi server
+create a breakpoint, press command shift enter, select debug and fastapi mode
+we need to learn how to debug using fastapi, see this later
+----
+change port:
+add this code to main.py and run python main.py, it runs now on 9000
+if __name__ == "__main__":
+   uvicorn.run(app, host, port)
+
+but uvicorn main:app --reload as usual runs on 8000
+
+----
+pydantic schema:
+
+1; lets store our request body we used for POST to a database ()
+2; first put imports required to separate file schema.py
+3; next fastapi connect to database, so create database.py
+4; we use sqlalchemy for this, create engine and declare mapping (ocr)
+5; with this database is created and connected
+6; database.py
+------
+now map and table:
+1; create models.py for schema/model
+2; include create table command in main.py
+create schema for table, called in fastapi as Model
+
+---
+store blog to database, we added some code to main.py
+now with the post route, you are adding records to database
+---
+Get Blogs from database
+now we create @app.get() decorator and pull blogs from database
+----
+now @app.get() for retrieving blogs as per id.
+----
+now let see how to respond to different situations, ie if fails or no data
+exception and status code
+1; right now we see response code as 200 for post, but real code should be 201
+update on decorator (the status_code param)
+we have a document to know what are the status values for each task, see that
+to not do this manual we can use status from fastapi
+for records not presnt, get is giving null with 200 ok, but we need proper response code and message 
+to do this we use response from fastapi
+you can create new exception using HTTPException not standard existing
+its all necessary to provide nice response when creating api for edge cases
+----
+delete blog
+1; use @app.delete(), and dont forget to commit after delete
+---
+update a blog
+use @app.put
+and dont forget to use request for both get and put operations
+and dont forget to commit
+---
+--
+The above is all how we do CRUD Operations using FastAPI
+There is lot more to learn in FastApi, lets go__
+
+---
+Response Model:
+for the response we are going to define model
+we use response_model argument for this, where we pass pydantic schema
+we need to define orm config when defining schema in schema.py
+---
+user
+use post with request
+for request schema is user in schema.py
+create model in models.py for storing user
+connect to db and this model and query 
+----
+hash the password:
+use passlib library, bcrypt
+-------
+show a user:
+whenever we create a user we dont want to show id and password
+so we need response model for user, so crete a schema for user and use it in main
+---
+get user:
+@app.get() and use schema for user 
+-----
+using docs tags, for properly showing routes in swagger ui
+this is just for documentation, no affect on code
+add tags to path operation, simple
+----
+Relationships
+when we fetch the blog we need to fetch owner of blog and all
+so we need foreign key for blog and maintain Relationships
+create foreign key in table and use backpopulate if necessary
+make sure of the response body in schemas are in proper order when using Relationships
+everything is in models.py and schema.py, know what each line does when doing relationships
+----
+API Router
+as there are multiple files in our fastapi code folder
+lets get it to proper structure for folder
+create routers folder, we have two router types (user and blog so two files)
+when we create a dedicated file for each router import APIRouter from FastAPI and creaye router instance
+now we move each router functions into individual files and call decorator @router, not @app
+and then register these routes in main.py, this way now it is perfectly in folder as expected
+with this we have a clean main.py and seperate router files for each blog and users (each file has their own routers)
+------
+API Router Operators
+
+instead of defining tags in each router you can define in the router instance now
+we can add prefixes to each router
+-----
+Blog and user repositories
+we need blog and user files in router to only have routing code
+so move all the other code like connecting to db and all to separate repository folder which has user and blog files
+and create functions here and call them inside blog and user files of router
+-----
+login and verify password
+1; create a router login in routers
+2; register in main.py
+3; this will be a post operation for route, as we give username and passowrd through swagger ui
+and then verify the requested username and password is in db or not in login router.
+4; for password verification we verify hash passwords, so create verify function in hash file, which will be used to verify request and db password
+---
+jwt access token
+1; in real projects we generate jwt token and verify the tokemn
+2; we dont verify username and password, as we did above
+3; install python-jose for this
+4; we need secret and algorithm to encode jwt and expiry time also
+5; create token.py and place these there
+6; you need schema for token and tokendata
+7; generate jwt token with create function in token.py, passing secret, expiry, algorithm
+8; now we need to use this create_access_token function and when user login we generate this token and keep until refresh code
+9; this related code is pasted in authentication.py
+10; we create token using user email after verification in authentication.py , if expiry time present it create token using this time terminology
+11; now when you login, we verify username and password exists in db
+12; and generate a token on this email and use it behnind the scenes for all the routes
+13; that means you can access these routes only when you are authenticated
+----
+Routes behind authentication
+1; move all routes behind authentication
+2; we will use OAuth2Passwordbearer for this
+3; create oauth2.py file
+4; to move route behind authentication, we need to say this route depends on get current user
+5; get current user gets current user (this function checks token and decodes and return user details)
+6; verify_token used here is in token.py
+7; now we need to use get_current_user  in our Routes
+------
+verify with postman
+1; install postman
+2; give the routes
+3; check if able to access blog without jwt token
+---
+finally deploy fastapi
+here we use deta for it, create an account first
+install cli for deta
+login to deta cli
+but deta is not there right now, we need to deploy on other cloud resources
+show see youtube for deploting fastapi on aws 
